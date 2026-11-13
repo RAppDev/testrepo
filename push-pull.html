@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Push or Pull?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Lexend:wght@400;500;700&family=Noto+Sans+Arabic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Sorting-table world: kraft cardboard, ink, two coloured crates to sort cards into */
+  --kraft:#e8d4ae;
+  --paper:#f8efdc;
+  --ink:#2b1f17;
+  --stamp:#d23a22;
+  --tape:#f2c12e;
+  --calm:#167566;
+  --muted:#6b5643;
+  --good:#167566;
+  --bad:#d23a22;
+  --display:"Bungee","Arial Black",Impact,sans-serif;
+  --body:"Lexend","Segoe UI",system-ui,sans-serif;
+  --arabic:"Noto Sans Arabic","Geeza Pro","Segoe UI",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--kraft);
+  background-image:repeating-linear-gradient(90deg,rgba(120,80,30,.045) 0 2px,transparent 2px 7px),repeating-linear-gradient(0deg,rgba(120,80,30,.03) 0 1px,transparent 1px 11px);
+  color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;
+}
+.wrap{max-width:1000px;margin:0 auto;padding:28px 18px 60px;display:grid;gap:22px}
+h1,h2,h3{font-family:var(--display);font-weight:400;line-height:1.1;margin:0;text-wrap:balance}
+p{margin:0}
+.ar{font-family:var(--arabic);direction:rtl;unicode-bidi:isolate}
+.eyebrow{font-family:var(--display);font-size:13px;letter-spacing:.06em;color:var(--stamp)}
+header{display:grid;gap:10px}
+header h1{font-size:clamp(38px,7vw,64px)}
+header h1 span{background:var(--tape);padding:0 .12em;display:inline-block;transform:rotate(-1.5deg)}
+.lede{max-width:62ch;font-size:18px}
+.howto{font-size:15px;color:var(--muted)}
+
+/* bins */
+.bins{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.bin{
+  background:var(--paper);border:3px solid var(--ink);border-radius:8px;box-shadow:6px 6px 0 var(--ink);
+  display:grid;grid-template-rows:auto 1fr;min-height:220px;transition:transform .15s, box-shadow .15s;
+}
+.bin.over{transform:translate(-2px,-2px);box-shadow:9px 9px 0 var(--ink)}
+.bin-head{padding:12px 14px;color:#fff;border-bottom:3px solid var(--ink);border-radius:5px 5px 0 0;display:grid;gap:2px}
+.bin-head h2{font-size:26px}
+.bin-head .ar{font-size:18px;font-weight:700;opacity:.95}
+.bin-head .tip{font-size:14px;font-weight:500;opacity:.95}
+.bin-body{padding:12px;display:grid;gap:10px;align-content:start}
+.empty{font-size:14px;color:var(--muted);border:2px dashed var(--line, rgba(43,31,23,.25));border-radius:6px;padding:14px;text-align:center}
+
+/* tray */
+.tray{display:grid;gap:12px}
+.tray-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
+.tray-head h2{font-size:20px}
+.count{font-family:var(--display);font-size:15px;background:var(--ink);color:var(--paper);padding:2px 10px;border-radius:4px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;min-height:40px}
+.card{
+  background:#fff;border:3px solid var(--ink);border-radius:8px;padding:12px;display:grid;gap:10px;
+  box-shadow:4px 4px 0 var(--ink);cursor:grab;animation:pop .35s cubic-bezier(.2,.9,.3,1.3) both;position:relative;
+}
+.card:active{cursor:grabbing}
+.card.dragging{opacity:.5}
+@keyframes pop{from{transform:scale(.92) rotate(-1deg);opacity:0}to{transform:none;opacity:1}}
+.card .top{display:flex;gap:12px;align-items:center}
+.card svg.ic{width:58px;height:58px;flex:none}
+.card .txt{font-weight:500;font-size:16px}
+.choices{display:flex;gap:8px;flex-wrap:wrap}
+.choices button{flex:1 1 0;min-width:96px}
+button{
+  font-family:var(--display);font-size:14px;cursor:pointer;color:#fff;background:var(--ink);
+  border:3px solid var(--ink);border-radius:6px;padding:8px 12px;box-shadow:3px 3px 0 var(--ink);
+  transition:transform .1s,box-shadow .1s,background .15s;
+}
+button:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+button.pick{background:#fff;color:var(--ink)}
+button.pick.on{color:#fff}
+button:disabled{cursor:default;opacity:.45;transform:none;box-shadow:3px 3px 0 var(--ink)}
+button.pick.on:disabled{opacity:1}
+:focus-visible{outline:4px solid var(--tape);outline-offset:3px}
+
+/* placed cards (compact) */
+.bin .card{padding:10px;box-shadow:3px 3px 0 var(--ink)}
+.bin .card svg.ic{width:44px;height:44px}
+.bin .card .txt{font-size:15px}
+.bin .choices button{font-size:12px;padding:6px 8px;min-width:80px}
+
+/* results on cards */
+.card.right{border-color:var(--good);box-shadow:3px 3px 0 var(--good)}
+.card.wrong{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad);background:#fdf0ec}
+.badge{position:absolute;top:-12px;right:-10px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:var(--display);font-size:18px;border:3px solid var(--ink)}
+.right .badge{background:var(--good)}
+.wrong .badge{background:var(--bad)}
+.why{font-size:14px;border-top:2px dashed rgba(43,31,23,.25);padding-top:8px}
+.why b{font-family:var(--display);font-weight:400}
+
+/* action bar */
+.actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.actions .go{font-size:18px;padding:12px 20px;background:var(--stamp);box-shadow:5px 5px 0 var(--ink)}
+.actions .again{background:var(--calm)}
+.msg{font-weight:700}
+
+/* results panel */
+.panel{background:var(--paper);border:3px solid var(--ink);border-radius:8px;box-shadow:6px 6px 0 var(--ink);padding:20px;display:grid;gap:16px;animation:pop .4s both}
+.score{display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+.stamp{font-family:var(--display);font-size:30px;border:5px solid currentColor;border-radius:8px;padding:4px 14px;transform:rotate(-5deg);display:inline-block;animation:thump .5s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes thump{from{transform:scale(1.8) rotate(-12deg);opacity:0}to{transform:rotate(-5deg);opacity:1}}
+.score .big{font-family:var(--display);font-size:42px;font-variant-numeric:tabular-nums}
+.rule{border-left:8px solid var(--tape);padding:6px 0 6px 14px;font-size:18px}
+.tablewrap{overflow-x:auto;border:3px solid var(--ink);border-radius:6px;background:#fff}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:15px}
+th,td{padding:10px 12px;text-align:left;vertical-align:top;border-bottom:2px solid rgba(43,31,23,.15)}
+th{font-family:var(--display);font-weight:400;font-size:13px;background:var(--ink);color:var(--paper);letter-spacing:.03em}
+tr:last-child td{border-bottom:0}
+td.res{font-family:var(--display);font-size:18px;text-align:center}
+td.res.ok{color:var(--good)}
+td.res.no{color:var(--bad)}
+.tag{font-family:var(--display);font-size:12px;color:#fff;padding:2px 8px;border-radius:4px;white-space:nowrap}
+td.stmt{min-width:220px}
+.st{display:flex;gap:10px;align-items:center}
+.st svg{width:34px;height:34px;flex:none}
+
+/* confetti boxes */
+.confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:20}
+.confetti span{position:absolute;top:-40px;width:18px;height:18px;border:2px solid var(--ink);animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
+
+footer{font-size:13px;color:var(--muted);text-align:center}
+
+@media (max-width:640px){
+  .bins{grid-template-columns:1fr}
+  .cards{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important}
+  .confetti{display:none}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <p class="eyebrow">INS260 · Chapter 9 · Supply chain models</p>
+    <h1 id="title"></h1>
+    <p class="lede">In a push model, companies guess what customers will buy and make it first. In a pull model, a real customer order starts everything. Sort each example into the right model.</p>
+    <p class="howto">Drag a card into a box, or tap one of the two buttons on the card. You can change your mind until you check your answers.</p>
+  </header>
+
+  <section class="tray" aria-labelledby="tray-h">
+    <div class="tray-head"><h2 id="tray-h">Cards to sort</h2><span class="count" id="count"></span></div>
+    <div class="cards" id="tray" data-drop=""></div>
+  </section>
+
+  <section class="bins" id="bins" aria-label="Sorting boxes"></section>
+
+  <div class="actions">
+    <button type="button" class="go" id="check">Check my answers</button>
+    <span class="msg" id="msg" role="status"></span>
+  </div>
+
+  <section class="panel" id="panel" hidden aria-labelledby="res-h"></section>
+
+  <footer>Made for INS260 at Zayed University.</footer>
+</main>
+<div class="confetti" id="confetti" aria-hidden="true"></div>
+
+<script>
+(function(){
+const DATA = {"a": {"key": "Push", "ar": "نموذج الدفع", "tip": "Guess first, sell later", "color": "#d23a22"}, "b": {"key": "Pull", "ar": "نموذج السحب", "tip": "Sell first, make later", "color": "#167566"}, "items": [{"id": "c0", "icon": "fridge", "text": "Ready-made sandwiches in a petrol station fridge", "answer": "Push", "why": "The sandwiches are made before anyone orders, based on a guess of how many will sell. Unsold ones are thrown away."}, {"id": "c1", "icon": "shawarma", "text": "Shawarma made after you order it", "answer": "Pull", "why": "Nothing is made until the customer orders. The order pulls the product."}, {"id": "c2", "icon": "bread", "text": "A bakery that bakes all its bread at 6 am", "answer": "Push", "why": "The bakery bakes based on how much it expects to sell that day, before customers arrive."}, {"id": "c3", "icon": "coffee", "text": "A coffee shop that makes your drink when you order", "answer": "Pull", "why": "The drink is made only after a real order, so nothing is wasted."}, {"id": "c4", "icon": "launch", "text": "Phones made in huge numbers before launch day", "answer": "Push", "why": "The company forecasts demand and builds stock in advance (build to stock)."}, {"id": "c5", "icon": "custompc", "text": "A custom-built computer made after you order it", "answer": "Pull", "why": "The computer is built after the order arrives (build to order)."}, {"id": "c6", "icon": "jacket", "text": "A clothing store orders winter jackets months in advance, based on last year's sales", "answer": "Push", "why": "The order is based on a forecast from past sales. If the winter is warm, the store is stuck with jackets."}, {"id": "c7", "icon": "replenish", "text": "Walmart's continuous replenishment: each time a customer buys an item, the supplier is told to replace exactly that amount", "answer": "Pull", "why": "Real sales trigger each new order, so stock follows what customers actually buy."}], "rule": "Push = <b>guess first, sell later</b>. Pull = <b>sell first, make later</b>. Pull is the idea behind the slogan “Make what we sell, not sell what we make.”", "title": "Push or Pull?"};
+const ICONS = {"launch": "<rect x=\"6\" y=\"14\" width=\"16\" height=\"30\" rx=\"3\" fill=\"#f8efdc\" stroke=\"#2b1f17\" stroke-width=\"2.2\"/><rect x=\"24\" y=\"10\" width=\"16\" height=\"30\" rx=\"3\" fill=\"#f8efdc\" stroke=\"#2b1f17\" stroke-width=\"2.2\"/><rect x=\"42\" y=\"14\" width=\"16\" height=\"30\" rx=\"3\" fill=\"#f8efdc\" stroke=\"#2b1f17\" stroke-width=\"2.2\"/><rect x=\"6\" y=\"46\" width=\"52\" height=\"12\" fill=\"#c9965a\" stroke=\"#2b1f17\" stroke-width=\"2.2\"/><text x=\"32\" y=\"56\" text-anchor=\"middle\" font-family=\"Bungee, Arial Black, sans-serif\" font-size=\"8\" fill=\"#2b1f17\">x 1,000,000</text>", "bread": "<path d=\"M6 38c0-12 12-18 26-18s26 6 26 18v8H6z\" fill=\"#d9a35f\" stroke=\"#2b1f17\" stroke-width=\"2.5\"/><path d=\"M20 28l-3 8M32 26v9M44 28l3 8\" stroke=\"#2b1f17\" stroke-width=\"2.2\" stroke-linecap=\"round\"/><circle cx=\"52\" cy=\"12\" r=\"7\" fill=\"#f2c12e\" stroke=\"#2b1f17\" stroke-width=\"2\"/><path d=\"M52 1v3M63 12h-3M60 4l-2 2\" stroke=\"#2b1f17\" stroke-width=\"2\" stroke-linecap=\"round\"/><text x=\"8\" y=\"60\" font-family=\"Bungee, Arial Black, sans-serif\" font-size=\"10\" fill=\"#2b1f17\">6:00</text>", "fridge": "<rect x=\"14\" y=\"4\" width=\"36\" height=\"56\" rx=\"4\" fill=\"#f8efdc\" stroke=\"#2b1f17\" stroke-width=\"3\"/><path d=\"M14 22h36\" stroke=\"#2b1f17\" stroke-width=\"3\"/><path d=\"M44 10v6M44 28v8\" stroke=\"#2b1f17\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M20 52l10-14 10 14z\" fill=\"#f2c12e\" stroke=\"#2b1f17\" stroke-width=\"2\"/><path d=\"M22 49h16\" stroke=\"#167566\" stroke-width=\"3\"/><path d=\"M30 52l8-11 7 11z\" fill=\"#f2c12e\" stroke=\"#2b1f17\" stroke-width=\"2\"/>", "replenish": "<rect x=\"10\" y=\"28\" width=\"44\" height=\"30\" fill=\"#f8efdc\" stroke=\"#2b1f17\" stroke-width=\"2.5\"/><path d=\"M6 28h52l-4-10H10z\" fill=\"#d23a22\" stroke=\"#2b1f17\" stroke-width=\"2.5\"/><rect x=\"26\" y=\"40\" width=\"12\" height=\"18\" fill=\"#2b1f17\"/><path d=\"M14 12a18 18 0 0 1 30-6\" fill=\"none\" stroke=\"#167566\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M40 2l5 4-5 4\" fill=\"none\" stroke=\"#167566\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M50 12a18 18 0 0 1-2 4\" stroke=\"#167566\" stroke-width=\"3\" stroke-linecap=\"round\"/><rect x=\"14\" y=\"34\" width=\"8\" height=\"8\" fill=\"#c9965a\" stroke=\"#2b1f17\" stroke-width=\"1.6\"/><rect x=\"42\" y=\"34\" width=\"8\" height=\"8\" fill=\"#c9965a\" stroke=\"#2b1f17\" stroke-width=\"1.6\"/>", "custompc": "<rect x=\"6\" y=\"8\" width=\"40\" height=\"28\" rx=\"2\" fill=\"#bfe1dc\" stroke=\"#2b1f17\" stroke-width=\"2.5\"/><path d=\"M20 36l-2 8h16l-2-8M14 46h24\" stroke=\"#2b1f17\" stroke-width=\"2.5\" fill=\"none\"/><rect x=\"48\" y=\"12\" width=\"12\" height=\"34\" rx=\"2\" fill=\"#f8efdc\" stroke=\"#2b1f17\" stroke-width=\"2.2\"/><path d=\"M38 46l14 12M48 58l6-6\" stroke=\"#2b1f17\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M14 18h20M14 24h14\" stroke=\"#167566\" stroke-width=\"2.5\"/><circle cx=\"54\" cy=\"18\" r=\"2\" fill=\"#d23a22\"/>", "jacket": "<path d=\"M22 6l10 6 10-6 12 8 6 22-8 2-2-10v30H14V26l-2 10-8-2 6-22z\" fill=\"#167566\" stroke=\"#2b1f17\" stroke-width=\"2.5\" stroke-linejoin=\"round\"/><path d=\"M32 12v44\" stroke=\"#2b1f17\" stroke-width=\"2.2\"/><path d=\"M26 6c0 4 3 6 6 6s6-2 6-6\" fill=\"#f8efdc\" stroke=\"#2b1f17\" stroke-width=\"2\"/><path d=\"M48 4v10M43 9h10M44.5 5.5l7 7M51.5 5.5l-7 7\" stroke=\"#2b1f17\" stroke-width=\"2\" stroke-linecap=\"round\"/>", "shawarma": "<path d=\"M16 54L40 8l12 6-22 44z\" fill=\"#f2d7a0\" stroke=\"#2b1f17\" stroke-width=\"2.5\" stroke-linejoin=\"round\"/><path d=\"M40 8c4-3 10 0 12 6\" fill=\"#167566\" stroke=\"#2b1f17\" stroke-width=\"2.5\"/><path d=\"M42 11c2 1 5 2 6 5\" stroke=\"#d23a22\" stroke-width=\"3\"/><path d=\"M14 54l8 4 6-12-10-5z\" fill=\"#f8efdc\" stroke=\"#2b1f17\" stroke-width=\"2.2\"/><circle cx=\"50\" cy=\"50\" r=\"9\" fill=\"#f8efdc\" stroke=\"#2b1f17\" stroke-width=\"2.2\"/><path d=\"M50 44v6l4 2\" stroke=\"#2b1f17\" stroke-width=\"2.2\" stroke-linecap=\"round\"/>", "coffee": "<path d=\"M14 24h30l-3 30H17z\" fill=\"#f8efdc\" stroke=\"#2b1f17\" stroke-width=\"2.5\" stroke-linejoin=\"round\"/><rect x=\"11\" y=\"18\" width=\"36\" height=\"7\" rx=\"2\" fill=\"#2b1f17\"/><path d=\"M44 30h4a6 6 0 0 1 0 12h-5\" fill=\"none\" stroke=\"#2b1f17\" stroke-width=\"2.5\"/><rect x=\"18\" y=\"34\" width=\"22\" height=\"9\" fill=\"#d23a22\"/><path d=\"M24 14c-2-4 2-6 0-10M32 14c-2-4 2-6 0-10\" stroke=\"#6b5643\" stroke-width=\"2.2\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M48 52h10l-2 8h-6z\" fill=\"#f2c12e\" stroke=\"#2b1f17\" stroke-width=\"1.8\"/>"};
+const A = DATA.a, B = DATA.b;
+const byKey = k => k === A.key ? A : B;
+const icon = (name, cls) => `<svg class="${cls||"ic"}" viewBox="0 0 64 64" aria-hidden="true">${ICONS[name]}</svg>`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function shuffle(arr){ const a = arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function fresh(){ return {order: shuffle(DATA.items.map(x=>x.id)), placed:{}, checked:false}; }
+
+let state = fresh();
+window.claude?.hot?.snapshot?.(() => state);
+
+const $ = s => document.querySelector(s);
+const item = id => DATA.items.find(x=>x.id===id);
+
+// Title: highlight the last word on a tape strip
+(function(){
+  const words = DATA.title.split(" ");
+  const last = words.pop();
+  $("#title").innerHTML = `${esc(words.join(" "))} <span>${esc(last)}</span>`;
+})();
+
+function cardHTML(it){
+  const chosen = state.placed[it.id];
+  let cls = "card", badge = "", why = "";
+  if(state.checked && chosen){
+    const ok = chosen === it.answer;
+    cls += ok ? " right" : " wrong";
+    badge = `<span class="badge" aria-hidden="true">${ok ? "✓" : "✗"}</span>`;
+    why = `<p class="why"><b style="color:${byKey(it.answer).color}">${esc(it.answer)}.</b> ${esc(it.why)}</p>`;
+  }
+  const btn = side => {
+    const on = chosen === side.key;
+    return `<button type="button" class="pick ${on?"on":""}" data-id="${it.id}" data-to="${side.key}" aria-pressed="${on}"
+      style="${on?`background:${side.color}`:""}" ${state.checked?"disabled":""}>${esc(side.key)}</button>`;
+  };
+  return `<article class="${cls}" draggable="${!state.checked}" data-card="${it.id}" aria-label="${esc(it.text)}${state.checked&&chosen?(chosen===it.answer?" (correct)":" (wrong)"):""}">
+    ${badge}
+    <div class="top">${icon(it.icon)}<p class="txt">${esc(it.text)}</p></div>
+    <div class="choices">${btn(A)}${btn(B)}</div>
+    ${why}
+  </article>`;
+}
+
+function render(){
+  const unplaced = state.order.filter(id => !state.placed[id]);
+  $("#tray").innerHTML = unplaced.length ? unplaced.map(id=>cardHTML(item(id))).join("")
+    : `<p class="empty">All cards are sorted. ${state.checked ? "" : "Check your answers when you're ready."}</p>`;
+  $("#count").textContent = `${unplaced.length} left`;
+
+  $("#bins").innerHTML = [A,B].map(side=>{
+    const ids = state.order.filter(id => state.placed[id] === side.key);
+    return `<div class="bin" data-drop="${side.key}">
+      <div class="bin-head" style="background:${side.color}">
+        <h2>${esc(side.key)}</h2>
+        <span class="ar" lang="ar">${esc(side.ar)}</span>
+        <span class="tip">${esc(side.tip)}</span>
+      </div>
+      <div class="bin-body">${ids.length ? ids.map(id=>cardHTML(item(id))).join("") : `<p class="empty">Drop cards here</p>`}</div>
+    </div>`;
+  }).join("");
+
+  const check = $("#check");
+  check.textContent = state.checked ? "Try again" : "Check my answers";
+  check.classList.toggle("again", state.checked);
+  if(!state.checked) $("#msg").textContent = "";
+
+  renderPanel();
+  bindDnD();
+}
+
+function renderPanel(){
+  const panel = $("#panel");
+  if(!state.checked){ panel.hidden = true; panel.innerHTML = ""; return; }
+  const total = DATA.items.length;
+  const score = DATA.items.filter(it => state.placed[it.id] === it.answer).length;
+  const perfect = score === total;
+  const verdict = perfect ? ["Perfect!", "var(--good)"] : score >= total - 2 ? ["Nearly!", "var(--tape)"] : ["Keep going", "var(--bad)"];
+  const rows = state.order.map((id,i)=>{
+    const it = item(id), mine = state.placed[id], ok = mine === it.answer;
+    return `<tr>
+      <td>${i+1}</td>
+      <td class="stmt"><div class="st">${icon(it.icon,"")}<span>${esc(it.text)}</span></div></td>
+      <td><span class="tag" style="background:${byKey(mine).color}">${esc(mine)}</span></td>
+      <td><span class="tag" style="background:${byKey(it.answer).color}">${esc(it.answer)}</span></td>
+      <td class="res ${ok?"ok":"no"}" aria-label="${ok?"correct":"wrong"}">${ok?"✓":"✗"}</td>
+      <td>${esc(it.why)}</td>
+    </tr>`;
+  }).join("");
+  panel.hidden = false;
+  panel.innerHTML = `
+    <div class="score">
+      <span class="stamp" style="color:${verdict[1]}">${verdict[0]}</span>
+      <h2 id="res-h"><span class="big">${score}/${total}</span> correct</h2>
+    </div>
+    <p class="rule">${DATA.rule}</p>
+    <div class="tablewrap">
+      <table>
+        <caption class="sr" style="position:absolute;left:-9999px">Your answers compared with the correct answers</caption>
+        <thead><tr><th>#</th><th>Statement</th><th>Your answer</th><th>Correct answer</th><th>Result</th><th>Why</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function place(id, to){
+  if(state.checked) return;
+  if(to) state.placed[id] = to; else delete state.placed[id];
+  render();
+  const el = document.querySelector(`[data-card="${id}"] button[data-to="${to||A.key}"]`);
+  el && el.focus({preventScroll:true});
+}
+
+// Buttons (event delegation)
+document.addEventListener("click", e=>{
+  const b = e.target.closest("button.pick");
+  if(b){ const id=b.dataset.id, to=b.dataset.to; place(id, state.placed[id]===to ? null : to); }
+});
+
+// Drag and drop (desktop)
+function bindDnD(){
+  document.querySelectorAll("[data-card]").forEach(c=>{
+    c.addEventListener("dragstart", e=>{ e.dataTransfer.setData("text/plain", c.dataset.card); c.classList.add("dragging"); });
+    c.addEventListener("dragend", ()=> c.classList.remove("dragging"));
+  });
+  document.querySelectorAll("[data-drop]").forEach(z=>{
+    z.addEventListener("dragover", e=>{ if(state.checked) return; e.preventDefault(); z.classList.add("over"); });
+    z.addEventListener("dragleave", ()=> z.classList.remove("over"));
+    z.addEventListener("drop", e=>{
+      e.preventDefault(); z.classList.remove("over");
+      const id = e.dataTransfer.getData("text/plain");
+      if(id && item(id)) place(id, z.dataset.drop || null);
+    });
+  });
+}
+
+function confetti(){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const box = $("#confetti"); box.innerHTML = "";
+  const colors = ["#f2c12e","#167566","#d23a22","#c9965a","#f8efdc"];
+  for(let i=0;i<40;i++){
+    const s = document.createElement("span");
+    s.style.left = Math.random()*100 + "vw";
+    s.style.background = colors[i % colors.length];
+    s.style.animationDuration = (1.6 + Math.random()*1.6) + "s";
+    s.style.animationDelay = (Math.random()*0.5) + "s";
+    box.appendChild(s);
+  }
+  setTimeout(()=> box.innerHTML = "", 4000);
+}
+
+$("#check").addEventListener("click", ()=>{
+  if(state.checked){
+    state = fresh(); render(); window.scrollTo({top:0, behavior:"smooth"}); return;
+  }
+  const left = DATA.items.filter(it => !state.placed[it.id]).length;
+  if(left){ $("#msg").textContent = `Sort all the cards first: ${left} still to go.`; return; }
+  state.checked = true;
+  render();
+  const score = DATA.items.filter(it => state.placed[it.id] === it.answer).length;
+  if(score === DATA.items.length) confetti();
+  $("#panel").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start"});
+});
+
+function start(saved){
+  if(saved && Array.isArray(saved.order) && saved.order.length === DATA.items.length) state = saved;
+  render();
+}
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+</body>
+</html>
